@@ -1,0 +1,4 @@
+(lambda (x := :int).
+  lambda (y := x | 0).
+    int y | x | fail)
+  -18446744073709551617 0
