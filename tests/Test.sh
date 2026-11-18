@@ -30,6 +30,11 @@ fi
 test ! -s "$dir/out"
 grep -Fq 'unbound variable x' "$dir/error"
 
+if printf '%s\n' 'λ (x := :int). y' | "$emit" > "$dir/out" 2> "$dir/error"; then
+  exit 1
+fi
+grep -Fxq -- '-:1:16: unbound variable y' "$dir/error"
+
 sed 's/si4/i4/g' "$dir/example.mlir" > "$dir/invalid.mlir"
 if "$opt" "$dir/invalid.mlir" > "$dir/out" 2> "$dir/error"; then
   exit 1

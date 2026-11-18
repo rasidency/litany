@@ -53,7 +53,8 @@ let emit code =
 let location source offset =
   let line = ref 1 and column = ref 1 in
   for i = 0 to offset - 1 do
-    if source.[i] = '\n' then (incr line; column := 1) else incr column
+    if source.[i] = '\n' then (incr line; column := 1)
+    else if Char.code source.[i] land 0xc0 <> 0x80 then incr column
   done;
   !line, !column
 
