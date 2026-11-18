@@ -3,7 +3,7 @@ LLVM_LIB ?= LLVM
 ROCQ ?= rocq
 OCAMLOPT ?= ocamlopt
 CXX ?= c++
-BUILD := _build
+BUILD ?= _build
 TABLEGEN := $(MLIR)/bin/mlir-tblgen
 GENERATED := $(foreach part,Dialect Types Ops,$(foreach ext,h cpp,$(BUILD)/$(part).$(ext).inc))
 
@@ -48,7 +48,7 @@ proof: $(BUILD)/Target.vo
 	cd $(BUILD) && $(ROCQ) check -silent Target
 
 check: all proof
-	sh tests/Test.sh
+	sh tests/Test.sh "$(BUILD)"
 
 clean:
 	rm -rf $(BUILD)
