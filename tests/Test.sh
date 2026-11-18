@@ -1,9 +1,11 @@
 set -eu
 
+cd "$(dirname "$0")/.."
+build=$(cd "${1:-_build}" && pwd)
 dir=$(mktemp -d)
 trap 'rm -rf "$dir"' EXIT
-emit=_build/litany
-opt=_build/litany-opt
+emit=$build/litany
+opt=$build/litany-opt
 
 "$emit" examples/Example.tim > "$dir/example.mlir"
 "$opt" "$dir/example.mlir" > "$dir/normal.mlir"
