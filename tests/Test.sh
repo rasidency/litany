@@ -13,6 +13,10 @@ opt=$build/litany-opt
 cmp "$dir/normal.mlir" "$dir/roundtrip.mlir"
 grep -Fq '"timbda.yield"(%arg0)' "$dir/normal.mlir"
 
+cp examples/Example.tim "$dir/-h"
+(cd "$dir" && "$emit" -- -h) > "$dir/dashfile.mlir"
+cmp "$dir/example.mlir" "$dir/dashfile.mlir"
+
 printf '%s\n' '(λ (x := :int). lambda (x := x | fail). x) -18446744073709551617' |
   "$emit" > "$dir/nested.mlir"
 "$opt" "$dir/nested.mlir" > "$dir/normal.mlir"
