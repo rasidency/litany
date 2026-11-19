@@ -45,6 +45,16 @@ if "$opt" "$dir/invalid.mlir" > "$dir/out" 2> "$dir/error"; then
 fi
 grep -Fq 'requires a signed integer attribute' "$dir/error"
 
+cat > "$dir/zerowidth.mlir" <<'EOF'
+module {
+  %0 = "timbda.constant"() <{value = 0 : si0}> : () -> !timbda.set
+}
+EOF
+if "$opt" "$dir/zerowidth.mlir" > "$dir/out" 2> "$dir/error"; then
+  exit 1
+fi
+grep -Fq 'requires a positive integer bit width' "$dir/error"
+
 sed 's/\^bb0(%v2: !timbda.set):/^bb0(%v2: !timbda.set, %extra: !timbda.set):/' \
   "$dir/example.mlir" > "$dir/invalid.mlir"
 if "$opt" "$dir/invalid.mlir" > "$dir/out" 2> "$dir/error"; then

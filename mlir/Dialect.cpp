@@ -24,8 +24,11 @@ void timbda::TimbdaDialect::initialize() {
 }
 
 mlir::LogicalResult timbda::Constant::verify() {
-  if (!getValueAttr().getType().isSignedInteger())
+  auto type = mlir::dyn_cast<mlir::IntegerType>(getValueAttr().getType());
+  if (!type || !type.isSigned())
     return emitOpError("requires a signed integer attribute");
+  if (type.getWidth() == 0)
+    return emitOpError("requires a positive integer bit width");
   return mlir::success();
 }
 
