@@ -59,11 +59,13 @@ let location source offset =
   !line, !column
 
 let () =
+  let usage = "usage: litany [--] [FILE|-]" in
   let file = match Array.to_list Sys.argv with
-    | [_] | [_; "-"] -> "-"
-    | [_; ("-h" | "--help")] -> print_endline "usage: litany [FILE|-]"; exit 0
+    | [_] | [_; ("-" | "--")] -> "-"
+    | [_; "--"; file] -> file
+    | [_; ("-h" | "--help")] -> print_endline usage; exit 0
     | [_; file] -> file
-    | _ -> prerr_endline "usage: litany [FILE|-]"; exit 2
+    | _ -> prerr_endline usage; exit 2
   in
   try
     let source =
