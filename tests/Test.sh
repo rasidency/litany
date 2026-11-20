@@ -75,3 +75,27 @@ grep -Fq '"timbda.choice"(%arg0,' "$dir/normal.mlir"
 grep -Fq '^bb0(%arg1: !timbda.set):' "$dir/normal.mlir"
 grep -Eq '"timbda.choice"\(%[0-9]+, %arg0\)' "$dir/normal.mlir"
 grep -Fq 'value = -18446744073709551617 : si66' "$dir/normal.mlir"
+
+cat > "$dir/escape.mlir" <<'MLIR'
+module {
+  func.func @main() -> !timbda.set {
+    %domain = "timbda.fail"() : () -> !timbda.set
+    %closure = "timbda.lambda"(%domain) ({
+    ^bb0(%bound: !timbda.set):
+      "timbda.yield"(%bound) : (!timbda.set) -> ()
+    }) : (!timbda.set) -> !timbda.set
+    return %bound : !timbda.set
+  }
+}
+MLIR
+if "$opt" "$dir/escape.mlir" > "$dir/out" 2> "$dir/error"; then
+  exit 1
+fi
+grep -Fq 'use of undeclared SSA value name' "$dir/error"
+
+sed 's/"timbda.yield"(%bound)/"timbda.yield"(%closure)/; s/return %bound/return %closure/' \
+  "$dir/escape.mlir" > "$dir/self.mlir"
+if "$opt" "$dir/self.mlir" > "$dir/out" 2> "$dir/error"; then
+  exit 1
+fi
+grep -Fq 'does not dominate this use' "$dir/error"
