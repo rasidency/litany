@@ -13,7 +13,11 @@ make check MLIR=/usr/lib/llvm-19
 
 The compiler gives each lambda an MLIR region and represents its parameter as a block argument of type `!timbda.set`. In this example, the outer argument feeds the inner domain through `timbda.choice` and appears again as a capture in the inner body. The negative literal comes through as `si66`:
 
-[![](media/Demo.gif)](media/Demo.mp4)
+<div align="center">
+
+https://github.com/user-attachments/assets/9d0e0eb4-6bce-4ba6-b1bd-cc285bbaec32
+
+</div>
 
 ```sh
 cat examples/Showcase.tim
