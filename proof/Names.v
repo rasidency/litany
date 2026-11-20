@@ -1,4 +1,4 @@
-From Stdlib Require Import Lists.List Strings.Ascii.
+From Stdlib Require Import Arith.PeanoNat Lists.List Strings.Ascii.
 Require Import Core.
 Import ListNotations.
 
@@ -123,3 +123,42 @@ Proof.
   induction 1; cbn; auto;
     now rewrite ?IHresolves, ?IHresolves1, ?IHresolves2, ?(lookup_complete x env n).
 Qed.
+
+Fixpoint closed_at depth (e : term) : Prop :=
+  match e with
+  | Lit _ | Int | Fail => True
+  | Var i => i < depth
+  | Range f => closed_at depth f
+  | Apply f x | Choice f x => closed_at depth f /\ closed_at depth x
+  | Lambda d b => closed_at depth d /\ closed_at (S depth) b
+  end.
+
+Lemma binding_bounded x env i :
+  binding x env i -> i < length env.
+Proof.
+  induction 1; cbn.
+  - apply Nat.lt_0_succ.
+  - exact (proj1 (Nat.succ_lt_mono _ _) IHbinding).
+Qed.
+
+Lemma resolves_closed L (e : named L) env t :
+  resolves env e t -> closed_at (length env) t.
+Proof.
+  induction 1; cbn.
+  - exact I.
+  - exact I.
+  - exact I.
+  - now apply (binding_bounded x).
+  - exact IHresolves.
+  - exact (conj IHresolves1 IHresolves2).
+  - exact (conj IHresolves1 IHresolves2).
+  - exact (conj IHresolves1 IHresolves2).
+Qed.
+
+Theorem resolve_closed L (e : named L) env t :
+  resolve env e = Resolved t -> closed_at (length env) t.
+Proof.
+  intros H. exact (resolves_closed L e env t (resolve_sound L e env t H)).
+Qed.
+
+Print Assumptions resolve_closed.
