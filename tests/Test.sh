@@ -75,6 +75,32 @@ if "$opt" "$dir/invalid.mlir" > "$dir/out" 2> "$dir/error"; then
 fi
 grep -Fq 'is outside the Timbda-0 lambda body grammar' "$dir/error"
 
+sed '/^    return/i\    %foreign = "builtin.unrealized_conversion_cast"() : () -> !timbda.set' \
+  "$dir/example.mlir" > "$dir/invalid.mlir"
+if "$opt" "$dir/invalid.mlir" > "$dir/out" 2> "$dir/error"; then
+  exit 1
+fi
+grep -Fq "'builtin.unrealized_conversion_cast' op is outside the Timbda-0 program grammar" "$dir/error"
+
+sed 's/^}$/  func.func private @other()\n}/' "$dir/example.mlir" > "$dir/invalid.mlir"
+if "$opt" "$dir/invalid.mlir" > "$dir/out" 2> "$dir/error"; then
+  exit 1
+fi
+grep -Fq "'func.func' op is outside the Timbda-0 program grammar" "$dir/error"
+
+sed 's/@main() -> !timbda.set/@main(%a: !timbda.set) -> !timbda.set/' \
+  "$dir/example.mlir" > "$dir/invalid.mlir"
+if "$opt" "$dir/invalid.mlir" > "$dir/out" 2> "$dir/error"; then
+  exit 1
+fi
+grep -Fq 'requires one block of type () -> !timbda.set' "$dir/error"
+
+sed 's/"timbda.int"() :/"timbda.int"() {foo} :/' "$dir/example.mlir" > "$dir/invalid.mlir"
+if "$opt" "$dir/invalid.mlir" > "$dir/out" 2> "$dir/error"; then
+  exit 1
+fi
+grep -Fq 'carries attributes outside the Timbda-0 program grammar' "$dir/error"
+
 "$emit" examples/Showcase.tim > "$dir/showcase.mlir"
 "$opt" "$dir/showcase.mlir" > "$dir/normal.mlir"
 grep -Fq '"timbda.choice"(%arg0,' "$dir/normal.mlir"
