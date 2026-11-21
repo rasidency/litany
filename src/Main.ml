@@ -1,9 +1,5 @@
 open Core
 
-let level index =
-  let rec count acc = function O -> acc | S n -> count (acc + 1) n in
-  count 0 index
-
 let emit code =
   let out = Buffer.create 256 in
   let add = Buffer.add_string out in
@@ -11,7 +7,7 @@ let emit code =
     Printf.ksprintf (fun text -> add (String.make depth ' '); add text; add "\n") format
   in
   let ty = "!timbda.set" in
-  let ref_name i = Printf.sprintf "%%v%d" (level i) in
+  let ref_name i = Printf.sprintf "%%v%d" i in
   let rec block depth top = function
     | Return value ->
         let name = ref_name value in
@@ -28,7 +24,7 @@ let emit code =
         let attrs = match literal with
           | None -> ""
           | Some z ->
-              let width = level (integer_width z) in
+              let width = integer_width z in
               if width > 0xffffff then failwith "integer exceeds MLIR's maximum bit width";
               let spelling = String.of_seq (List.to_seq (print_integer z)) in
               Printf.sprintf " <{value = %s : si%d}>" spelling width
