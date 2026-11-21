@@ -21,13 +21,17 @@ $(BUILD)/Names.vo: proof/Names.v $(BUILD)/Core.vo
 	cp $< $(BUILD)/Names.v
 	cd $(BUILD) && $(ROCQ) compile Names.v
 
-$(BUILD)/Target.vo $(BUILD)/core.ml $(BUILD)/core.mli &: proof/Target.v $(BUILD)/Names.vo
+$(BUILD)/Target.vo: proof/Target.v $(BUILD)/Names.vo
 	cp $< $(BUILD)/Target.v
 	cd $(BUILD) && $(ROCQ) compile Target.v
 
-$(BUILD)/litany: $(BUILD)/core.ml $(BUILD)/core.mli src/Syntax.ml src/Main.ml
-	cp src/Syntax.ml src/Main.ml $(BUILD)/
-	cd $(BUILD) && $(OCAMLOPT) -o litany core.mli core.ml Syntax.ml Main.ml
+$(BUILD)/Validate.vo $(BUILD)/core.ml $(BUILD)/core.mli &: proof/Validate.v $(BUILD)/Target.vo
+	cp $< $(BUILD)/Validate.v
+	cd $(BUILD) && $(ROCQ) compile Validate.v
+
+$(BUILD)/litany: $(BUILD)/core.ml $(BUILD)/core.mli src/Syntax.ml src/Reader.ml src/Main.ml
+	cp src/Syntax.ml src/Reader.ml src/Main.ml $(BUILD)/
+	cd $(BUILD) && $(OCAMLOPT) -o litany core.mli core.ml Syntax.ml Reader.ml Main.ml
 
 define generate
 $(BUILD)/$(1).$(2).inc: mlir/Dialect.td | $(BUILD)
@@ -44,8 +48,8 @@ $(eval $(call generate,Ops,cpp,op,defs))
 $(BUILD)/litany-opt: mlir/Dialect.cpp $(GENERATED) Makefile
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -std=c++17 -O2 -I "$(MLIR)/include" -I $(BUILD) $< -L "$(MLIR)/lib" -Wl,-rpath,"$(MLIR)/lib" $(LDFLAGS) -lMLIR -l$(LLVM_LIB) -o $@
 
-proof: $(BUILD)/Target.vo
-	cd $(BUILD) && $(ROCQ) check -silent -o Target > context.txt 2>&1
+proof: $(BUILD)/Validate.vo
+	cd $(BUILD) && $(ROCQ) check -silent -o Validate > context.txt 2>&1
 	@for fact in 'Theory: Set is predicative' 'Theory: Rewrite rules are not allowed' \
 	  'Axioms: <none>' 'Constants/Inductives relying on type-in-type: <none>' \
 	  'Constants/Inductives relying on unsafe (co)fixpoints: <none>' \
