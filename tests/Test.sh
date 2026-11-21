@@ -131,3 +131,34 @@ if "$opt" "$dir/self.mlir" > "$dir/out" 2> "$dir/error"; then
   exit 1
 fi
 grep -Fq 'does not dominate this use' "$dir/error"
+
+for example in Example Showcase Redundant; do
+  "$emit" "examples/$example.tim" | "$opt" --canonicalize --cse --canonicalize > "$dir/optimised.mlir"
+  "$emit" --validate "examples/$example.tim" "$dir/optimised.mlir" | grep -Fq "validated:"
+  "$emit" "examples/$example.tim" | "$emit" --validate "examples/$example.tim" | grep -Fq "validated:"
+done
+
+"$emit" --validate examples/Redundant.tim "$dir/optimised.mlir" > "$dir/out"
+grep -Fxq "validated: 17 operations in examples/Redundant.tim, 6 in $dir/optimised.mlir" "$dir/out"
+
+for change in 's/value = 7 : si4/value = 8 : si5/' 's/"timbda.apply"(%0, %arg0)/"timbda.apply"(%arg0, %0)/' \
+    's/"timbda.yield"(%5)/"timbda.yield"(%arg0)/' 's/return %4/return %3/'; do
+  sed "$change" "$dir/optimised.mlir" > "$dir/changed.mlir"
+  if cmp -s "$dir/optimised.mlir" "$dir/changed.mlir"; then
+    exit 1
+  fi
+  "$opt" "$dir/changed.mlir" > /dev/null
+  if "$emit" --validate examples/Redundant.tim "$dir/changed.mlir" > "$dir/out" 2> "$dir/error"; then
+    exit 1
+  fi
+  grep -Fq 'does not provably denote the same set' "$dir/error"
+done
+
+if "$emit" --validate examples/Example.tim "$dir/escape.mlir" > "$dir/out" 2> "$dir/error"; then
+  exit 1
+fi
+grep -Fq 'undefined value %bound' "$dir/error"
+
+seq 0 1999 | awk '{ printf "%s%d", (NR > 1 ? "|" : ""), $1 % 3 } END { print "" }' > "$dir/wide.tim"
+"$emit" "$dir/wide.tim" | "$opt" --canonicalize --cse --canonicalize > "$dir/optimised.mlir"
+"$emit" --validate "$dir/wide.tim" "$dir/optimised.mlir" | grep -Fq "validated: 3999 operations"

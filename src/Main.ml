@@ -54,31 +54,51 @@ let location source offset =
   done;
   !line, !column
 
+let read file =
+  if file = "-" then In_channel.input_all stdin
+  else In_channel.with_open_bin file In_channel.input_all
+
+let parsed file source parse =
+  try parse source with
+  | Syntax.Error (offset, message) ->
+      let line, column = location source offset in
+      Printf.eprintf "%s:%d:%d: %s\n" file line column message;
+      exit 1
+
+let compile file =
+  let source = read file in
+  parsed file source (fun source ->
+    match translate (Syntax.parse source) with
+    | Compiled code -> code
+    | Rejected (offset, name) ->
+        let name = String.of_seq (List.to_seq name) in
+        raise (Syntax.Error (offset, "unbound variable " ^ name)))
+
 let () =
-  let usage = "usage: litany [--] [FILE|-]" in
-  let file = match Array.to_list Sys.argv with
-    | [_] | [_; ("-" | "--")] -> "-"
-    | [_; "--"; file] -> file
+  let usage = "usage: litany [--] [FILE|-]\n       litany --validate SOURCE [OPTIMISED|-]" in
+  let run = function
+    | [_] | [_; ("-" | "--")] -> `Emit "-"
     | [_; ("-h" | "--help")] -> print_endline usage; exit 0
-    | [_; file] -> file
+    | [_; "--validate"; source] -> `Validate (source, "-")
+    | [_; "--validate"; source; optimised] -> `Validate (source, optimised)
+    | [_; "--"; file] -> `Emit file
+    | [_; file] when file <> "--validate" -> `Emit file
     | _ -> prerr_endline usage; exit 2
   in
   try
-    let source =
-      if file = "-" then In_channel.input_all stdin
-      else In_channel.with_open_bin file In_channel.input_all
-    in
-    try
-      match translate (Syntax.parse source) with
-      | Compiled code -> print_string (emit code)
-      | Rejected (offset, name) ->
-          let name = String.of_seq (List.to_seq name) in
-          raise (Syntax.Error (offset, "unbound variable " ^ name))
-    with
-    | Syntax.Error (offset, message) ->
-        let line, column = location source offset in
-        Printf.eprintf "%s:%d:%d: %s\n" file line column message;
-        exit 1
+    match run (Array.to_list Sys.argv) with
+    | `Emit file -> print_string (emit (compile file))
+    | `Validate (source, optimised) ->
+        let code = compile source in
+        let text = read optimised in
+        let target = parsed optimised text Reader.read in
+        if validate code target then
+          Printf.printf "validated: %d operations in %s, %d in %s\n"
+            (Reader.size code) source (Reader.size target) optimised
+        else begin
+          Printf.eprintf "litany: %s does not provably denote the same set as %s\n" optimised source;
+          exit 1
+        end
   with
   | Sys_error message | Failure message ->
       Printf.eprintf "litany: %s\n" message;
