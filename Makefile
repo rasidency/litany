@@ -45,7 +45,13 @@ $(BUILD)/litany-opt: mlir/Dialect.cpp $(GENERATED) Makefile
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -std=c++17 -O2 -I "$(MLIR)/include" -I $(BUILD) $< -L "$(MLIR)/lib" -Wl,-rpath,"$(MLIR)/lib" $(LDFLAGS) -lMLIR -l$(LLVM_LIB) -o $@
 
 proof: $(BUILD)/Target.vo
-	cd $(BUILD) && $(ROCQ) check -silent Target
+	cd $(BUILD) && $(ROCQ) check -silent -o Target > context.txt 2>&1
+	@for fact in 'Theory: Set is predicative' 'Theory: Rewrite rules are not allowed' \
+	  'Axioms: <none>' 'Constants/Inductives relying on type-in-type: <none>' \
+	  'Constants/Inductives relying on unsafe (co)fixpoints: <none>' \
+	  'Inductives whose positivity is assumed: <none>'; do \
+	  grep -Fxq "* $$fact" $(BUILD)/context.txt || { echo "proof: missing '$$fact'" >&2; exit 1; }; \
+	done
 
 check: all proof
 	sh tests/Test.sh "$(BUILD)"
