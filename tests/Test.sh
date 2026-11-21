@@ -24,6 +24,12 @@ grep -Fq '"timbda.choice"(%arg0,' "$dir/normal.mlir"
 grep -Fq '"timbda.yield"(%arg1)' "$dir/normal.mlir"
 grep -Fq 'value = -18446744073709551617 : si66' "$dir/normal.mlir"
 
+printf '%s\n' '-1 | -2 | -128 | -129 | 127 | 128 | 0' | "$emit" > "$dir/widths.mlir"
+"$opt" "$dir/widths.mlir" > "$dir/normal.mlir"
+for literal in '-1 : si1' '-2 : si2' '-128 : si8' '-129 : si9' '127 : si8' '128 : si9' '0 : si1'; do
+  grep -Fq "value = $literal}" "$dir/normal.mlir"
+done
+
 printf '%s\n' 'lambda (x := 1). lambda (y := 2). x' | "$emit" > "$dir/capture.mlir"
 "$opt" "$dir/capture.mlir" > "$dir/normal.mlir"
 grep -Fq '"timbda.yield"(%arg0)' "$dir/normal.mlir"
@@ -68,6 +74,32 @@ if "$opt" "$dir/invalid.mlir" > "$dir/out" 2> "$dir/error"; then
   exit 1
 fi
 grep -Fq 'is outside the Timbda-0 lambda body grammar' "$dir/error"
+
+sed '/^    return/i\    %foreign = "builtin.unrealized_conversion_cast"() : () -> !timbda.set' \
+  "$dir/example.mlir" > "$dir/invalid.mlir"
+if "$opt" "$dir/invalid.mlir" > "$dir/out" 2> "$dir/error"; then
+  exit 1
+fi
+grep -Fq "'builtin.unrealized_conversion_cast' op is outside the Timbda-0 program grammar" "$dir/error"
+
+sed 's/^}$/  func.func private @other()\n}/' "$dir/example.mlir" > "$dir/invalid.mlir"
+if "$opt" "$dir/invalid.mlir" > "$dir/out" 2> "$dir/error"; then
+  exit 1
+fi
+grep -Fq "'func.func' op is outside the Timbda-0 program grammar" "$dir/error"
+
+sed 's/@main() -> !timbda.set/@main(%a: !timbda.set) -> !timbda.set/' \
+  "$dir/example.mlir" > "$dir/invalid.mlir"
+if "$opt" "$dir/invalid.mlir" > "$dir/out" 2> "$dir/error"; then
+  exit 1
+fi
+grep -Fq 'requires one block of type () -> !timbda.set' "$dir/error"
+
+sed 's/"timbda.int"() :/"timbda.int"() {foo} :/' "$dir/example.mlir" > "$dir/invalid.mlir"
+if "$opt" "$dir/invalid.mlir" > "$dir/out" 2> "$dir/error"; then
+  exit 1
+fi
+grep -Fq 'carries attributes outside the Timbda-0 program grammar' "$dir/error"
 
 "$emit" examples/Showcase.tim > "$dir/showcase.mlir"
 "$opt" "$dir/showcase.mlir" > "$dir/normal.mlir"
