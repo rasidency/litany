@@ -281,8 +281,19 @@ Qed.
 Definition integer_width z :=
   match z with
   | Z0 => 1%nat
-  | Zpos p | Zneg p => S (Pos.size_nat p)
+  | Zpos p => S (Pos.size_nat p)
+  | Zneg p => S (N.size_nat (Pos.pred_N p))
   end.
+
+Lemma pred_cases p :
+  (p = 1%positive /\ Pos.pred_N p = N0) \/
+  exists q, p = Pos.succ q /\ Pos.pred_N p = Npos q.
+Proof.
+  pose proof (N.succ_pos_pred p) as H.
+  destruct (Pos.pred_N p) as [|q]; cbn in H; injection H as <-.
+  - now left.
+  - right. now exists q.
+Qed.
 
 Theorem integer_width_fits z :
   let limit := (2 ^ Z.of_nat (Nat.pred (integer_width z)))%Z in
@@ -291,8 +302,22 @@ Proof.
   destruct z as [|p|p]; cbn [integer_width Nat.pred].
   - cbn. lia.
   - pose proof (proj2 (Zpower2_Psize (Pos.size_nat p) p) (Nat.le_refl _)). lia.
-  - pose proof (proj2 (Zpower2_Psize (Pos.size_nat p) p) (Nat.le_refl _)). lia.
+  - destruct (pred_cases p) as [[-> ->]|(q & -> & ->)]; cbn [N.size_nat].
+    + cbn. lia.
+    + pose proof (proj2 (Zpower2_Psize (Pos.size_nat q) q) (Nat.le_refl _)). lia.
+Qed.
+
+Theorem integer_width_least z n :
+  (- 2 ^ Z.of_nat n <= z < 2 ^ Z.of_nat n)%Z -> (integer_width z <= S n)%nat.
+Proof.
+  intros [Hlow Hhigh]. destruct z as [|p|p]; cbn [integer_width].
+  - lia.
+  - apply le_n_S. now apply (proj1 (Zpower2_Psize n p)).
+  - apply le_n_S. destruct (pred_cases p) as [[-> ->]|(q & -> & ->)]; cbn [N.size_nat].
+    + lia.
+    + apply (proj1 (Zpower2_Psize n q)). lia.
 Qed.
 
 Print Assumptions integer_text_roundtrip.
 Print Assumptions integer_width_fits.
+Print Assumptions integer_width_least.
