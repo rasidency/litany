@@ -5,6 +5,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
+#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -37,6 +38,26 @@ mlir::LogicalResult timbda::Constant::verify() {
   if (type.getWidth() == 0)
     return emitOpError("requires a positive integer bit width");
   return mlir::success();
+}
+
+static bool failing(mlir::Value value) { return value.getDefiningOp<timbda::Fail>() != nullptr; }
+
+mlir::OpFoldResult timbda::Range::fold(FoldAdaptor) {
+  return failing(getGraph()) ? getGraph() : nullptr;
+}
+
+mlir::OpFoldResult timbda::Apply::fold(FoldAdaptor) {
+  if (failing(getGraph()))
+    return getGraph();
+  return failing(getArg()) ? getArg() : nullptr;
+}
+
+mlir::OpFoldResult timbda::Choice::fold(FoldAdaptor) {
+  if (failing(getLeft()))
+    return getRight();
+  if (failing(getRight()) || getLeft() == getRight())
+    return getLeft();
+  return nullptr;
 }
 
 mlir::LogicalResult timbda::Lambda::verifyRegions() {
@@ -92,6 +113,8 @@ struct Program
 
 int main(int argc, char **argv) {
   llvm::InitLLVM init(argc, argv);
+  mlir::registerCanonicalizerPass();
+  mlir::registerCSEPass();
   mlir::DialectRegistry registry;
   registry.insert<timbda::TimbdaDialect, mlir::func::FuncDialect>();
   auto [input, output] = mlir::registerAndParseCLIOptions(

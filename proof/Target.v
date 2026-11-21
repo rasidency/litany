@@ -166,9 +166,3 @@ Print Assumptions encode_roundtrip.
 Print Assumptions decode_canonical.
 Print Assumptions translate_verified.
 Print Assumptions example_denotes_seven.
-
-From Corelib Require Import extraction.ExtrOcamlBasic.
-From Stdlib Require Import extraction.ExtrOcamlString extraction.ExtrOcamlNatInt.
-Extraction Language OCaml.
-Set Extraction Output Directory ".".
-Extraction "core.ml" translate parse_integer print_integer integer_width.
