@@ -32,3 +32,5 @@ The block argument denotes a singleton while the lambda result contains every to
 ### Verification
 
 `translate_verified` starts at a closed named syntax tree and ends at the MLIR operation tree. It proves that the target decodes to well scoped SSA and that for any interpretation of integers and graphs, a value belongs to the target denotation exactly when it belongs to the source denotation. The same development proves that translation accepts exactly the lexically resolvable trees  that decimal literals round trip and fit their signed attribute widths and that [the identity example](examples/Example.tim) denotes `{7}` under the integer identity interpretation. Rocq checks these results without axioms, and `make check` fails unless the kernel checker reports no axioms or unsafe fixpoints across the whole dependency closure, before it exercises the OCaml text parser and printer and the native MLIR verifier
+
+Extraction maps `nat` onto native OCaml `int` so that printing an SSA index costs constant time rather than a walk over unary numerals, which means the compiler also trusts that indices and literal widths, both linear in the input, stay below `max_int`
